@@ -5,12 +5,14 @@ use List::MoreUtils qw{uniq};
 use Parallel::ForkManager;
  use Cwd;
 my $num_args = $#ARGV + 1;
-if ($num_args != 1) {
-  print "\nUsage: newgatk_bsub.pl directory_containing_fastq_files \n";
+if ($num_args != 2) {
+  print "\nUsage: newgatk_bsub.pl directory_containing_fastq_files Soybean_line_type\n";
   # exp_file
   exit;
 }
 my $dir = $ARGV[0];
+my $soybean_type = $ARGV[1];
+chomp $soybean_type;
 my $old_dir = getcwd;
 chdir($dir);
 
@@ -20,10 +22,40 @@ my @files = grep/\.(fq|fastq)/,glob("*.*");
 my @gt = map { (split/_/,$_)[0];} @files;
 
 @HN = uniq(@gt);
-print join "\n",@HN;
+print join "\n",@HN,"\n";
 chdir($old_dir);
-
+my @hap_jobs = ();
+my @job_id;
 foreach my $gtype(@HN){
 print "bsub -R \"rusage[mem=15000] span[hosts=1]\" -J $gtype -o $gtype.o%J -e $gtype.e%J -q normal -n 1 \"perl gatk_new.pl $gtype $dir\"\n\n";
 system  "bsub -R \"rusage[mem=15000] span[hosts=1]\" -J $gtype -o $gtype.o%J -e $gtype.e%J -q normal -n 1 \"perl gatk_new.pl $gtype $dir\"";
+my $id = (split/\s+/,`bjobs |grep $gtype`)[0];
+print $id,"\n";
+push(@job_id,$id);
+my $hap_job = "Haplotypecaller_".$gtype;
+my $condition = "\"ended($id)\"";
+system  "bsub -w $condition -R \"rusage[mem=15000] span[hosts=1]\" -J $hap_job -o $hap_job.o%J -e $hap_job.e%J -q normal -n 1 \"perl Haplotype_caller.pl $gtype\"";
+push(@hap,$hap_job);
+}
+my $hap_cond = create_dependency(\@hap);
+system  "bsub -w $hap_cond -R \"rusage[mem=15000] span[hosts=1]\" -J gvcf_$soybean_type -o gvcf_$soybean_type.o%J -e gvcf_$soybean_type.e%J -q normal -n 1 \"perl gvcf.pl $soybean_type\"";
+
+my $UG_cond = create_dependency(\@job_id);
+system  "bsub -w $UG_cond -R \"rusage[mem=15000] span[hosts=1]\" -J UG_$soybean_type -o UG_$soybean_type.o%J -e UG_$soybean_type.e%J -q normal -n 1 \"perl Unified_genotyper.pl $soybean_type\"";
+
+
+
+sub create_dependency{
+my $arr = shift;
+my $counter = 0;
+my $condition = '"';
+my $and = ' && ';
+map{
+$counter++;
+if($counter < scalar @$arr){
+$condition.="ended($_)".$and;
+}
+else {$condition.="ended($_)".'"';}
+}@$arr;
+return($condition);
 }
