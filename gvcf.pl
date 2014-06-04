@@ -5,20 +5,26 @@ use Cwd;
 use File::Path qw(make_path remove_tree);
 
 my $num_args = $#ARGV + 1;
-if ($num_args != 1) {
-  print "\nUsage: gvcf.pl Soybean_line_type \n";
+if ($num_args != 2) {
+  print "\nUsage: gvcf.pl old_or_new_genome Soybean_line_type directory \n";
   exit;
 }
 
-my $condition_type = $ARGV[0];
-chomp($condition_type);
+my $condition_type = $ARGV[1];
+my $dir = $ARGV[2];
+chomp $dir;
+my $gentyp = $ARGV[0];
+my $reference;
+if($gentyp=~/old/){$reference = "/home/santosj/data/Gmax_v9.0/Gmax_v_0.9.fa";}
+else{$reference = "/home/skhan/bio/Gmax_assembly/Gmax_275_v2.0.fa";}
+
+print $reference,"\n";
 
 my $outdir = getcwd."/$condition_type"."_GVCF/";
 print $outdir,"\n";
 my @all_files = ();
-my $reference = "/home/skhan/bio/Gmax_assembly/Gmax_275_v2.0.fa";
 my %hash;
-find(\&print_name_if_dir, ".");
+find(\&print_name_if_dir, $dir);
 my @files=sort grep/HaplotypeCaller/,grep/\.vcf$/,@all_files;
 
 my @file_types = qw(GVCF SNP_only INDEL_only SNP_filtered INDEL_filtered SNP_passed INDEL_passed);

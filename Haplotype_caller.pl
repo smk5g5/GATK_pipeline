@@ -6,13 +6,20 @@ use File::Path qw(make_path remove_tree);
 use File::Basename;
 
 my $num_args = $#ARGV + 1;
-if ($num_args != 1) {
-print "\nUsage: Haplotype_caller.pl genotype\n";
+if ($num_args != 2) {
+print "\nUsage: Haplotype_caller.pl old_or_new_genome genotype\n";
 exit;
 }
-my $gtype = $ARGV[0];
+my $gtype = $ARGV[1];
 chomp $gtype;
-my $reference = "/home/skhan/bio/Gmax_assembly/Gmax_275_v2.0.fa";
+
+my $gentyp = $ARGV[0];
+my $reference;
+if($gentyp=~/old/){$reference = "/home/santosj/data/Gmax_v9.0/Gmax_v_0.9.fa";}
+else{$reference = "/home/skhan/bio/Gmax_assembly/Gmax_275_v2.0.fa";}
+
+print $reference,"\n";
+
 my @all_files = ();
 
 find(\&print_name_if_dir, ".");

@@ -5,17 +5,24 @@ use List::MoreUtils qw{uniq};
 use Parallel::ForkManager;
 
 my $num_args = $#ARGV + 1;
-if ($num_args != 2) {
-  print "\nUsage: gatk_new.pl genome_prefix directory_containing_fastq_files\n";
+if ($num_args != 3) {
+  print "\nUsage: gatk_new.pl genome_prefix old_or_new_genome directory_containing_fastq_files\n";
   # exp_file
   exit;
 }
 my $gen_prefix = $ARGV[0];
-my $dir = $ARGV[1];
+my $gentyp = $ARGV[1];
+my $reference;
+if($gentyp=~/old/){$reference = "/home/santosj/data/Gmax_v9.0/Gmax_v_0.9.fa";}
+else{$reference = "/home/skhan/bio/Gmax_assembly/Gmax_275_v2.0.fa";}
+
+print $reference,"\n";
+
+my $dir = $ARGV[2];
+chomp $dir;
 chdir($dir);
 my $outdir = "GATK_3.0_".$gen_prefix;
 mkdir $outdir;
-my $reference = "/home/skhan/bio/Gmax_assembly/Gmax_275_v2.0.fa";
 my @files = grep/\.(fq|fastq)/,glob("*.*");
 # my @gt = map { (split/_/,$_)[0];} @files;
 # my @HN = uniq(@gt);
@@ -47,13 +54,13 @@ $output = "$outdir/".$_."_".$gen_prefix.".vcf";
 }
 else{
 $output = "$outdir/".$gen_prefix."_realigner.intervals";
-($_,$output);
+('intervals',$output);
 }
 } @file_types;
 
 print Dumper(\%hash_files),"\n";
 # java -Xmx10g -XX:+UseSerialGC -jar
-# -XX:+UseSerialGC 
+# -XX:+UseSerialGC
 @commands_argv = (
 "
 bwa mem -M $reference  $fastq[0] $fastq[1] > $hash_files{'Sam'};
@@ -78,7 +85,6 @@ my $outfile = "$outdir/$gen_prefix.txt";
 my $out = read_file("$outfile");
 if(($out=~/extremely\s+high\s+quality\s+score/)||($out=~/wrong\s+encoding/)){
 print "extremely high quality score detected\n";
-exit;
 my @gatk_sys =
 (
 "
